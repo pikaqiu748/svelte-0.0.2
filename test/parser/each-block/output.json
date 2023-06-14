@@ -1,0 +1,45 @@
+{
+	"html": {
+		"start": 0,
+		"end": 56,
+		"type": "Fragment",
+		"children": [
+			{
+				"start": 0,
+				"end": 56,
+				"type": "EachBlock",
+				"expression": {
+					"start": 8,
+					"end": 15,
+					"type": "Identifier",
+					"name": "animals"
+				},
+				"context": "animal",
+				"children": [
+					{
+						"start": 29,
+						"end": 46,
+						"type": "Element",
+						"name": "p",
+						"attributes": [],
+						"children": [
+							{
+								"start": 32,
+								"end": 42,
+								"type": "MustacheTag",
+								"expression": {
+									"start": 34,
+									"end": 40,
+									"type": "Identifier",
+									"name": "animal"
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"css": null,
+	"js": null
+}
