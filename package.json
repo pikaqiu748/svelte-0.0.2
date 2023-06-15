@@ -4,6 +4,7 @@
   "description": "The magical disappearing UI framework",
   "main": "dist/svelte.umd.js",
   "module": "dist/svelte.es.js",
+  "type": "module",
   "scripts": {
     "test": "mocha  --require esm --opts mocha.opts --recursive ./**/__test__.js test/test.js",
     "lint": "eslint compiler",
