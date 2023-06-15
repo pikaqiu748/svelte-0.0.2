@@ -1,3 +1,4 @@
+// import { compile } from '../dist/svelte.es.js'
 import { compile } from '../compiler/index.js'
 import parse from '../compiler/parse/index.js'
 import * as assert from 'assert'
