@@ -1,13 +1,10 @@
-import nodeResolve from 'rollup-plugin-node-resolve';
+// import nodeResolve from 'rollup-plugin-node-resolve';
 
 export default {
-	entry: 'compiler/index.js',
-	moduleName: 'svelte',
-	targets: [
-		{ dest: 'dist/svelte.umd.js', format: 'umd' },
-		{ dest: 'dist/svelte.es.js', format: 'es' }
-	],
-	plugins: [
-		nodeResolve({ jsnext: true, module: true })
-	]
+	input: 'compiler/index.js',
+	// moduleName: 'svelte',
+	output: [{file:'dist/svelte.es.js',format:'es'},{file:'dist/svelte.umd.js',format:'umd'}],
+	// plugins: [
+	// 	nodeResolve({ jsnext: true, module: true })
+	// ]
 };
