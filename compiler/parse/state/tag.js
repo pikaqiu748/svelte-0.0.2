@@ -80,7 +80,6 @@ export default function tag(parser) {
   let attribute
   while ((attribute = readAttribute(parser))) {
     attributes.push(attribute)
-    // console.log('attribute',attribute);
     parser.allowWhitespace()
   }
 
@@ -89,13 +88,13 @@ export default function tag(parser) {
   // special cases – <script> and <style>
   if (name in specials) {
     const special = specials[name]
-
     if (parser[special.id]) {
       parser.index = start
       parser.error(`You can only have one <${name}> tag per component`)
     }
-
+    // 表示当前位置必须以>开头
     parser.eat('>', true)
+    // 即parser['js']=...
     parser[special.property] = special.read(parser, start, attributes)
     return
   }
@@ -118,7 +117,7 @@ export default function tag(parser) {
   if (selfClosing) {
     element.end = parser.index
   } else {
-    // don't push self-closing elements onto the stack
+    // don't push self-closing elements onto the stack,because it have no child.
     parser.stack.push(element)
   }
 
@@ -129,7 +128,6 @@ function readTagName(parser) {
   const start = parser.index
   const name = parser.readUntil(/(\s|\/|>)/)
   // like button  li and so on.
-  // console.log('name:',name);
   if (!validTagName.test(name)) {
     parser.error(`Expected valid tag name`, start)
   }
@@ -171,7 +169,7 @@ function readAttribute(parser) {
     }
   }
 
-  // 针对比如style=  或者class=
+  // 针对比如style=  或者class=，返回属性值，要么是data字段表示，要么是expression表示
   const value = parser.eat('=') ? readAttributeValue(parser) : true
 
   return {
@@ -226,7 +224,7 @@ function readQuotedAttributeValue(parser, quoteMark) {
         if (!parser.eat('}}')) {
           parser.error(`Expected }}`)
         }
-        //  attribute-dynamic-multiple就有多个chunk,里面的两个mustache就是两个chunk,还有中间的一个空格
+        //  attribute-dynamic-multiple就有多个chunk,里面的两个mustache就是两个chunk,还有中间的一个空格也是
         chunks.push({
           start: index,
           end: parser.index,
@@ -247,7 +245,6 @@ function readQuotedAttributeValue(parser, quoteMark) {
         currentChunk.end = parser.index++
 
         if (currentChunk.data) chunks.push(currentChunk)
-        console.log('chunks', chunks)
         // 例如test/compiler/binding-input-checkbox/main.svelte,
         // 返回chunks：[ { start: 13, end: 21, type: 'Text', data: 'checkbox' } ]
         return chunks
