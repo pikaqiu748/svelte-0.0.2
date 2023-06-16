@@ -73,7 +73,7 @@ export default function parse(template) {
       // 根据str.length，判断传入的template的前str.length字符是否等于str
       return this.template.slice(this.index, this.index + str.length) === str
     },
-
+    // 如果template中的this.index位置为空格，则this.index++
     allowWhitespace() {
       while (this.index < this.template.length && whitespace.test(this.template[this.index])) {
         this.index++
@@ -81,27 +81,28 @@ export default function parse(template) {
     },
 
     read(pattern) {
+      // 进行模式匹配
       const match = pattern.exec(this.template.slice(this.index))
+      // 如果不含模式串或者开头匹配失败
       if (!match || match.index !== 0) return null
-
+      // 开头匹配成功，将this.index后移到匹配内容的后面，
       parser.index += match[0].length
-
+      // 同时返回匹配字符串
       return match[0]
     },
 
+    // 读取从this.index到模式串之前的内容，如果没有模式串，则直接读取this.index后面的剩余部分
     readUntil(pattern) {
       // exec method will return a result array,others it returns null
+      // 判断template中的this.index后面的剩余部分是否含有pattern字符串
       const match = pattern.exec(this.template.slice(this.index))
-      //   match.index is the position of pattern in template,
-      // it is say that if match successfully,it will return comment part
-      // between <!-- and -->
       return this.template.slice(this.index, match ? (this.index += match.index) : this.template.length)
     },
-
+    // 返回template中this.index后面的剩余部分
     remaining() {
       return this.template.slice(this.index)
     },
-
+    // 判断字符串中是否含有空格，没有则报错
     requireWhitespace() {
       if (!whitespace.test(this.template[this.index])) {
         this.error(`Expected whitespace`)
@@ -131,7 +132,7 @@ export default function parse(template) {
   //   parser对象中的index默认为0,parser.template是parser函数传来的参数，即.svelte文件内容
   while (parser.index < parser.template.length) {
     // 返回对应的解析函数，并且如果parser.index小于parser.template.length，则继续执行返回的函数
-	// state(parser)如果匹配到注释，则会返回null，此时如果parser.index小于parser.template.length，则会继续执行fragment函数
+    // state(parser)如果匹配到注释，则会返回null，此时如果parser.index小于parser.template.length，则会继续执行fragment函数
     state = state(parser) || fragment
   }
   // trim unnecessary whitespace
