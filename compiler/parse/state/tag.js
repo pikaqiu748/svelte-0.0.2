@@ -80,7 +80,7 @@ export default function tag(parser) {
   let attribute
   while ((attribute = readAttribute(parser))) {
     attributes.push(attribute)
-	// console.log('attribute',attribute);
+    // console.log('attribute',attribute);
     parser.allowWhitespace()
   }
 
@@ -127,7 +127,6 @@ export default function tag(parser) {
 
 function readTagName(parser) {
   const start = parser.index
-
   const name = parser.readUntil(/(\s|\/|>)/)
   // like button  li and so on.
   // console.log('name:',name);
@@ -140,22 +139,29 @@ function readTagName(parser) {
 
 function readAttribute(parser) {
   const start = parser.index
-
+  // 这个正则表达式是一个字符集合，表示匹配包括空格（\s）、等号（=）、斜杠（/）和大于号（>）在内的任意一个字符。
+  // 下句返回属性名，例如 style='...',返回style。class='...',返回class.<textarea readonly>返回readonly
+  // <button on:click='set({ visible: !visible })'>返回 on:click
+  // {/* <input type='checkbox' bind:checked='foo'> */}  分别返回type 和bind:checked
+  // <input ref:input autofocus>返回ref:input
   const name = parser.readUntil(/(\s|=|\/|>)/)
   if (!name) return null
-//   console.log('anme--', name)
+  // console.log('name', name)
   parser.allowWhitespace()
 
+  // 如果匹配到事件
   if (/^on:/.test(name)) {
+    // 再往下开头的匹配必须是等号
     parser.eat('=', true)
     return readEventHandlerDirective(parser, start, name.slice(3))
   }
-
+  // 匹配到属性值绑定
   if (/^bind:/.test(name)) {
+    // 再往下开头的匹配必须是等号
     parser.eat('=', true)
     return readBindingDirective(parser, start, name.slice(5))
   }
-
+  // 匹配到ref引用
   if (/^ref:/.test(name)) {
     return {
       start,
@@ -165,6 +171,7 @@ function readAttribute(parser) {
     }
   }
 
+  // 针对比如style=  或者class=
   const value = parser.eat('=') ? readAttributeValue(parser) : true
 
   return {
@@ -184,6 +191,7 @@ function readAttributeValue(parser) {
 }
 
 function readQuotedAttributeValue(parser, quoteMark) {
+  // 用来表示当前属性值信息的一个对象
   let currentChunk = {
     start: parser.index,
     end: null,
@@ -199,9 +207,11 @@ function readQuotedAttributeValue(parser, quoteMark) {
     if (escaped) {
       currentChunk.data += parser.template[parser.index++]
     } else {
+      // 获取开始解析的位置
       const index = parser.index
-
+      // 开始位置为{{开头,例如test/compiler/attribute-dynamic-multiple/main.svelte
       if (parser.eat('{{')) {
+        // console.log('parser',parser);
         currentChunk.end = index
 
         if (currentChunk.data) {
@@ -209,11 +219,14 @@ function readQuotedAttributeValue(parser, quoteMark) {
         }
 
         const expression = readExpression(parser)
+        // console.log('expression',expression);
+        // 将index移动到非空格处
         parser.allowWhitespace()
+        // 读取完表达式，如果不是以}}结尾，则说明格式错误
         if (!parser.eat('}}')) {
           parser.error(`Expected }}`)
         }
-
+        //  attribute-dynamic-multiple就有多个chunk,里面的两个mustache就是两个chunk,还有中间的一个空格
         chunks.push({
           start: index,
           end: parser.index,
@@ -230,14 +243,20 @@ function readQuotedAttributeValue(parser, quoteMark) {
       } else if (parser.eat('\\')) {
         escaped = true
       } else if (parser.match(quoteMark)) {
+        // 开始位置传入参数quoteMark为开头,例如test/compiler/binding-input-checkbox/main.svelte
         currentChunk.end = parser.index++
 
         if (currentChunk.data) chunks.push(currentChunk)
+        console.log('chunks', chunks)
+        // 例如test/compiler/binding-input-checkbox/main.svelte,
+        // 返回chunks：[ { start: 13, end: 21, type: 'Text', data: 'checkbox' } ]
         return chunks
       } else {
         currentChunk.data += parser.template[parser.index++]
       }
+      // 第一层else结束,对应第一个if
     }
+    // while结束
   }
 
   parser.error(`Unexpected end of input`)

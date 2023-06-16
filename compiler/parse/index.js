@@ -76,7 +76,7 @@ export default function parse(template) {
       // 根据str.length，判断传入的template的前str.length字符是否等于str
       return this.template.slice(this.index, this.index + str.length) === str
     },
-    // 如果template中的this.index位置为空格，则this.index++
+    // 如果template中的this.index位置为空格,包括换行符，则this.index++
     allowWhitespace() {
       while (this.index < this.template.length && whitespace.test(this.template[this.index])) {
         this.index++
@@ -97,7 +97,6 @@ export default function parse(template) {
     // 读取从this.index到模式串之前的内容，如果没有模式串，则直接读取this.index后面的剩余部分
     readUntil(pattern) {
       // exec method will return a result array,others it returns null
-      // 判断template中的this.index后面的剩余部分是否含有pattern字符串
       const match = pattern.exec(this.template.slice(this.index))
       return this.template.slice(this.index, match ? (this.index += match.index) : this.template.length)
     },
