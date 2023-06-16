@@ -53,13 +53,15 @@ export default function parse(template) {
       parser.error(err.message.replace(/\(\d+:\d+\)$/, ''), err.pos)
     },
 
+    // 错误提示函数
     error(message, index = this.index) {
       throw new ParseError(message, this.template, index)
     },
 
+    // 判断模版字符串中的this.index位置开始，是否匹配str成功
+    // 同时如果传入参数required=true，匹配失败，则进行提示
     eat(str, required) {
       if (this.match(str)) {
-        // 将index移动到<!--后面的位置
         this.index += str.length
         return true
       }
@@ -138,7 +140,6 @@ export default function parse(template) {
   // trim unnecessary whitespace
 
   while (parser.html.children.length) {
-    // console.log('length',parser.html);
     const firstChild = parser.html.children[0]
     parser.html.start = firstChild.start
 
