@@ -78,7 +78,9 @@ export default function tag(parser) {
   const attributes = []
 
   let attribute
+  // 例如解析attribute-static-boolean时，while的第二次再次调用readAttribute()时，回返回null,结束while
   while ((attribute = readAttribute(parser))) {
+    // console.log('attribute',attribute);
     attributes.push(attribute)
     parser.allowWhitespace()
   }
@@ -98,7 +100,7 @@ export default function tag(parser) {
     parser[special.property] = special.read(parser, start, attributes)
     return
   }
-
+  // textarea会直接来到这里
   const element = {
     start,
     end: null, // filled in later
@@ -118,6 +120,7 @@ export default function tag(parser) {
     element.end = parser.index
   } else {
     // don't push self-closing elements onto the stack,because it have no child.
+    // 压入栈，进行该child节点的下一次解析。
     parser.stack.push(element)
   }
 
@@ -169,7 +172,8 @@ function readAttribute(parser) {
     }
   }
 
-  // 针对比如style=  或者class=，返回属性值，要么是data字段表示，要么是expression表示
+  // 针对比如style=  或者class=，readonly=,返回属性值，要么是data字段表示，要么是expression表示
+  // readAttributeValue返回chunks数组，即匹配到的各种语法块的表示
   const value = parser.eat('=') ? readAttributeValue(parser) : true
 
   return {
@@ -200,9 +204,11 @@ function readQuotedAttributeValue(parser, quoteMark) {
   let escaped = false
 
   const chunks = []
-
+  // console.log('parser', parser)
+  //例如 "<textarea readonly='{{readonly}}'></textarea>"   index=20，从{{开始
   while (parser.index < parser.template.length) {
     if (escaped) {
+      // 此时currentChunk.data=
       currentChunk.data += parser.template[parser.index++]
     } else {
       // 获取开始解析的位置
@@ -211,14 +217,35 @@ function readQuotedAttributeValue(parser, quoteMark) {
       if (parser.eat('{{')) {
         // console.log('parser',parser);
         currentChunk.end = index
-
+        // console.log('currentChunk',currentChunk);
+        // 此时currentChunk为:{ start: 20, end: 20, type: 'Text', data: '' }
         if (currentChunk.data) {
           chunks.push(currentChunk)
         }
 
+        // parser {
+        //   index: 20,
+        //   template: "<textarea readonly='{{readonly}}'></textarea>",
+        //   stack: [ { start: null, end: null, type: 'Fragment', children: [] } ],
+        //   current: [Function: current],
+        //   acornError: [Function: acornError],
+        //   error: [Function: error],
+        //   eat: [Function: eat],
+        //   match: [Function: match],
+        //   allowWhitespace: [Function: allowWhitespace],
+        //   read: [Function: read],
+        //   readUntil: [Function: readUntil],
+        //   remaining: [Function: remaining],
+        //   requireWhitespace: [Function: requireWhitespace],
+        //   html: { start: null, end: null, type: 'Fragment', children: [] },
+        //   css: null,
+        //   js: null
+        // }
+        // 传入的parser如上所示,readExpression会从{{readonly=开始解析，并返回相应的语法树
         const expression = readExpression(parser)
         // console.log('expression',expression);
         // 将index移动到非空格处
+        // console.log('this.index',parser.template.slice(parser.index));
         parser.allowWhitespace()
         // 读取完表达式，如果不是以}}结尾，则说明格式错误
         if (!parser.eat('}}')) {
@@ -227,11 +254,13 @@ function readQuotedAttributeValue(parser, quoteMark) {
         //  attribute-dynamic-multiple就有多个chunk,里面的两个mustache就是两个chunk,还有中间的一个空格也是
         chunks.push({
           start: index,
+          // parser.index已经到了readonly}}这里,正好start,end分别表示MustacheTag的开始和结束位置
+          // 就是说，chunk为匹配的当前语法块的开始和结束等信息
           end: parser.index,
           type: 'MustacheTag',
           expression,
         })
-
+        // console.log('chunk',parser.index);
         currentChunk = {
           start: parser.index,
           end: null,
@@ -241,9 +270,11 @@ function readQuotedAttributeValue(parser, quoteMark) {
       } else if (parser.eat('\\')) {
         escaped = true
       } else if (parser.match(quoteMark)) {
-        // 开始位置传入参数quoteMark为开头,例如test/compiler/binding-input-checkbox/main.svelte
+        console.log('parser.index::::::', parser.index)
+        // 第一轮解析readonly的mustache后，会走这里，此时parser.index=32
         currentChunk.end = parser.index++
-
+        // 此时第二轮的readonly解析，currentChunk.data为空，所以不会压入chunks中，
+        // 并直接返回chunks，结束readonly的解析
         if (currentChunk.data) chunks.push(currentChunk)
         // 例如test/compiler/binding-input-checkbox/main.svelte,
         // 返回chunks：[ { start: 13, end: 21, type: 'Text', data: 'checkbox' } ]
