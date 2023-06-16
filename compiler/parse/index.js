@@ -8,6 +8,7 @@ function tabsToSpaces(str) {
   return str.replace(/^\t+/, (match) => match.split('\t').join('  '))
 }
 
+// 输出带line number的解析错误信息
 function ParseError(message, template, index) {
   const { line, column } = locate(template, index)
   const lines = template.split('\n')
@@ -114,9 +115,41 @@ export default function parse(template) {
     },
 
     html: {
+      // html片段的开始位置和结束位置
       start: null,
       end: null,
       type: 'Fragment',
+      //在解析.svelte文件中的html时，如果html有多行（这种情况很常见），则首先会将所有的html拼接成一行
+      // 即拼接后，行与行之间也会有‘\n',例如<span>test</test>\n<div>hello</div>
+      // 则在children中的存储模式为：
+      // {
+      //   start: 0,
+      //   end: 17,
+      //   type: 'Element',
+      //   name: 'span',
+      //   attributes: [],
+      //   children: [Array]
+      // },
+      // {
+      //   start: 17,
+      //   end: 18,
+      //   type: 'Text',
+      //   name: '\n',
+      // },
+      // {
+      //   start: 18,
+      //   end: 33,
+      //   type: 'Element',
+      //   name: 'div',
+      //   attributes: [],
+      //   children: [Array]
+      // },
+      // {
+      //   start: 33,
+      //   end: 34,
+      //   type: 'Text',
+      //   name: '\n',
+      // },
       children: [],
     },
 
@@ -130,15 +163,27 @@ export default function parse(template) {
   // fragment函数，回根据参数‘<'或者‘{{’进行匹配,返回tag函数或者mustache函数，这两个函数分别解析对应的标签
   // 否则为文本，直接返回text文本
   let state = fragment
-
   //   parser对象中的index默认为0,parser.template是parser函数传来的参数，即.svelte文件内容
   while (parser.index < parser.template.length) {
     // 返回对应的解析函数，并且如果parser.index小于parser.template.length，则继续执行返回的函数
     // state(parser)如果匹配到注释，则会返回null，此时如果parser.index小于parser.template.length，则会继续执行fragment函数
     state = state(parser) || fragment
   }
-  // trim unnecessary whitespace
+  // console.log('after parser:', parser.html.children[0].children)
 
+// single-static-element 的   parser.html.children
+  // [
+  //   {
+  //     start: 0,
+  //     end: 17,
+  //     type: 'Element',
+  //     name: 'span',
+  //     attributes: [],
+  //     children: [ [Object] ]
+  //   },
+  //   { start: 17, end: 18, type: 'Text', data: '\n' }
+  // ]
+  // trim unnecessary whitespace
   while (parser.html.children.length) {
     const firstChild = parser.html.children[0]
     parser.html.start = firstChild.start
@@ -146,6 +191,7 @@ export default function parse(template) {
     if (firstChild.type !== 'Text') break
 
     const length = firstChild.data.length
+    // 将字符串开头空格去掉，包括换行符，并返回剩余字符串
     firstChild.data = trimStart(firstChild.data)
 
     if (firstChild.data === '') {
@@ -159,16 +205,21 @@ export default function parse(template) {
   while (parser.html.children.length) {
     const lastChild = parser.html.children[parser.html.children.length - 1]
     parser.html.end = lastChild.end
-
+    
     if (lastChild.type !== 'Text') break
-
+    
     const length = lastChild.data.length
+    //如果是Text类型，则添加data属性，且为去除空格的长度，包括换行符。
     lastChild.data = trimEnd(lastChild.data)
-
     if (lastChild.data === '') {
+      // 最后一个child全部为空格，则去掉该child
       parser.html.children.pop()
     } else {
+      // length为trimEnd之前的总长度，即包括空格的长度。
+      // lastChild.data.length为去除空格后的长度
+      // 更新html片段的结束位置
       parser.html.end -= length - lastChild.data.length
+
       break
     }
   }
