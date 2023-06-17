@@ -96,7 +96,7 @@ export default function tag(parser) {
     }
     // 表示当前位置必须以>开头
     parser.eat('>', true)
-    // 返回js部分解析后的内容信息
+    // 返回js或者style部分解析后的内容信息
     parser[special.property] = special.read(parser, start, attributes)
     return
   }
