@@ -31,8 +31,26 @@ function createRenderer(fragment) {
 }
 
 export default function generate(parsed, template) {
+  //  template 整个文件内容
+  // parsed,源文件编译后的内容
   const code = new MagicString(template)
+  // console.log('code-------',code);
   function addSourcemapLocations(node) {
+    // parsed.js.content:文件中的export {}部分。
+    // {
+    //   type: 'Program',
+    //   start: 21,
+    //   end: 153,
+    //   body: [
+    //     Node {
+    //       type: 'ExportDefaultDeclaration',
+    //       start: 23,
+    //       end: 153,
+    //       declaration: [Node]
+    //     }
+    //   ],
+    //   sourceType: 'module'
+    // }
     walk(node, {
       enter(node) {
         code.addSourcemapLocation(node.start)
@@ -43,15 +61,65 @@ export default function generate(parsed, template) {
 
   const templateProperties = {}
 
+  // 如果源文件有js代码
   if (parsed.js) {
+    // parsed.js.content:文件中的export {}部分。
+    // {
+    //   type: 'Program',
+    //   start: 21,
+    //   end: 153,
+    //   body: [
+    //     Node {
+    //       type: 'ExportDefaultDeclaration',
+    //       start: 23,
+    //       end: 153,
+    //       declaration: [Node]
+    //     }
+    //   ],
+    //   sourceType: 'module'
+    // }
     addSourcemapLocations(parsed.js.content)
-
+    // 文件lifecycle-events为例
+    // 找到返回export{}部分信息
+    //  {
+    //   type: 'ExportDefaultDeclaration',
+    //   start: 23,
+    //   end: 153,
+    //   declaration: Node {
+    //     type: 'ObjectExpression',
+    //     start: 38,
+    //     end: 152,
+    //     properties: [ [Node], [Node] ]
+    //   }
+    // }
     const defaultExport = parsed.js.content.body.find((node) => node.type === 'ExportDefaultDeclaration')
-
     if (defaultExport) {
+      // 'export default {'  to   'const template ='
       code.overwrite(defaultExport.start, defaultExport.declaration.start, `const template = `)
-
+      // {
+      //   type: 'Property',
+      //   start: 42,
+      //   end: 90,
+      //   method: true,
+      //   shorthand: false,
+      //   computed: false,
+      //   key: Node { type: 'Identifier', start: 42, end: 50, name: 'onrender' },
+      //   kind: 'init',
+      //   value: Node {
+      //     type: 'FunctionExpression',
+      //     start: 51,
+      //     end: 90,
+      //     id: null,
+      //     generator: false,
+      //     expression: false,
+      //     async: false,
+      //     params: [],
+      //     body: [Node]
+      //   }
+      // }
+      // each property just like above example
       defaultExport.declaration.properties.forEach((prop) => {
+        // prop.key.name:函数名，prop.value：函数体的映射
         templateProperties[prop.key.name] = prop.value
       })
     }

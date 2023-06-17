@@ -10,6 +10,7 @@ export function compile ( template ) {
 	//   }
 	const parsed = parse( template );
 	// TODO validate template
+	// parsed为解析后的内容，template为源文件内容
 	const generated = generate( parsed, template );
 	return generated;
 }
