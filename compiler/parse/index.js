@@ -223,6 +223,7 @@ export default function parse(template) {
     }
   }
   // 即parser函数返回一个对象，分别包含html，css,js
+  // console.log(parser.html.children[0].children[0].expression?parser.html.children[0].children[0].expression:"");
   return {
     html: parser.html,
     css: parser.css,

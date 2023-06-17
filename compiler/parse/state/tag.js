@@ -270,7 +270,6 @@ function readQuotedAttributeValue(parser, quoteMark) {
       } else if (parser.eat('\\')) {
         escaped = true
       } else if (parser.match(quoteMark)) {
-        console.log('parser.index::::::', parser.index)
         // 第一轮解析readonly的mustache后，会走这里，此时parser.index=32
         currentChunk.end = parser.index++
         // 此时第二轮的readonly解析，currentChunk.data为空，所以不会压入chunks中，
