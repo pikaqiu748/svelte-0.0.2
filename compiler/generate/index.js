@@ -51,6 +51,9 @@ export default function generate(parsed, template) {
     //   ],
     //   sourceType: 'module'
     // }
+    // walk()函数中可以传入 options，其中 enter() 在每次访问AST节点的时候会被调用，leave() 则是在离开 AST节点
+    // 的时候被调用。
+    // 函数链接：https://blog.csdn.net/weixin_56658592/article/details/121598876
     walk(node, {
       enter(node) {
         code.addSourcemapLocation(node.start)
@@ -124,10 +127,11 @@ export default function generate(parsed, template) {
       })
     }
   }
-
   const helpers = {}
+  // 如果export{}中有名字为helpers的函数，则进行以下遍历处理，例如文件helpers中
   if (templateProperties.helpers) {
     templateProperties.helpers.properties.forEach((prop) => {
+      // 对helpers中的函数名和函数体做映射
       helpers[prop.key.name] = prop.value
     })
   }
@@ -166,7 +170,17 @@ export default function generate(parsed, template) {
   }
 
   let usesRefs = false
-
+  // [
+  //   {
+  //     start: 0,
+  //     end: 31,
+  //     type: 'Element',
+  //     name: 'p',
+  //     attributes: [],
+  //     children: [ [Object] ]
+  //   }
+  // ]
+  // helpers文件中的parsed.html.children为以上所示
   parsed.html.children.forEach((child) => {
     walkHtml(child, {
       Comment: {
@@ -175,6 +189,16 @@ export default function generate(parsed, template) {
 
       Element: {
         enter(node) {
+          // refs文件为例，node如下
+          // {
+          //   start: 0,
+          //   end: 25,
+          //   type: 'Element',
+          //   name: 'canvas',
+          //   attributes: [ { start: 8, end: 15, type: 'Ref', name: 'foo' } ],
+          //   children: []
+          // }
+          // 统计name数量，并返回name
           const name = current.counter(node.name)
 
           const initStatements = [`var ${name} = document.createElement( '${node.name}' );`]
@@ -319,14 +343,18 @@ export default function generate(parsed, template) {
 								`)
               }
             } else if (attribute.type === 'Binding') {
+          
               createBinding(node, name, attribute, current, initStatements, updateStatements, teardownStatements, allUsedContexts)
             } else if (attribute.type === 'Ref') {
               usesRefs = true
-
+              // refs文件中，attribute.name='foo',name=node.name='canvas'
               initStatements.push(deindent`
 								component.refs.${attribute.name} = ${name};
 							`)
-
+              //initStatements: [
+              //   "var canvas = document.createElement( 'canvas' );",
+              //   'component.refs.foo = canvas;'
+              // ]
               teardownStatements.push(deindent`
 								component.refs.${attribute.name} = null;
 							`)
@@ -381,7 +409,7 @@ export default function generate(parsed, template) {
 						`)
           }
         },
-      },
+      }, //Element结束
 
       Text: {
         enter(node) {

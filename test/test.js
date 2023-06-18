@@ -61,7 +61,7 @@ describe('svelte', () => {
 
     function env() {
       return new Promise((fulfil, reject) => {
-		// 
+        //
         jsdom.env('<main></main>', (err, window) => {
           if (err) {
             reject(err)
@@ -86,7 +86,7 @@ describe('svelte', () => {
           const source = fs.readFileSync(`test/compiler/${dir}/main.svelte`, 'utf-8')
           // 进行编译
           compiled = compile(source)
-		//   console.log('compi',compiled);
+          //   console.log('compi',compiled);
         } catch (err) {
           if (config.compileError) {
             config.compileError(err)
@@ -112,7 +112,7 @@ describe('svelte', () => {
         let factory
 
         try {
-			// 经过编译后，每个文件都有export default createComponent(options)
+          // 经过编译后，每个文件都有export default createComponent(options)
           factory = require(`./compiler/${dir}/main.svelte`).default
         } catch (err) {
           console.log(withLineNumbers) // eslint-disable-line no-console
@@ -126,19 +126,19 @@ describe('svelte', () => {
         return env()
           .then((window) => {
             const target = window.document.querySelector('main')
-			// 经过编译后，每个文件都有export default createComponent(options)
+            // 经过编译后，每个文件都有export default createComponent(options)
             const component = factory({
               target,
               data: config.data,
             })
-			// 返回的component:
-			// {
-			// 	get: [Function: get],
-			// 	set: [Function: set],
-			// 	observe: [Function (anonymous)],
-			// 	teardown: [Function: teardown],
-			// 	events: [ 'render' ]
-			//   }
+            // 返回的component:
+            // {
+            // 	get: [Function: get],
+            // 	set: [Function: set],
+            // 	observe: [Function (anonymous)],
+            // 	teardown: [Function: teardown],
+            // 	events: [ 'render' ]
+            //   }
             if (config.html) {
               assert.equal(target.innerHTML, config.html)
             }
