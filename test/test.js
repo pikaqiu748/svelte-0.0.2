@@ -61,7 +61,6 @@ describe('svelte', () => {
 
     function env() {
       return new Promise((fulfil, reject) => {
-        //
         jsdom.env('<main></main>', (err, window) => {
           if (err) {
             reject(err)
@@ -86,7 +85,6 @@ describe('svelte', () => {
           const source = fs.readFileSync(`test/compiler/${dir}/main.svelte`, 'utf-8')
           // 进行编译
           compiled = compile(source)
-          //   console.log('compi',compiled);
         } catch (err) {
           if (config.compileError) {
             config.compileError(err)
@@ -107,6 +105,7 @@ describe('svelte', () => {
           .join('\n')
         //  path.resolve(param),返回param的绝对路径，
         // 例如/Users/lihui/Desktop/svelte-0.0.2/test/compiler/event-handler-removal/main.svelte
+        // 对编译后的代码进行缓存
         cache[path.resolve(`test/compiler/${dir}/main.svelte`)] = code
 
         let factory

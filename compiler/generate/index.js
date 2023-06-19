@@ -54,6 +54,8 @@ export default function generate(parsed, template) {
     // walk()函数中可以传入 options，其中 enter() 在每次访问AST节点的时候会被调用，leave() 则是在离开 AST节点
     // 的时候被调用。
     // 函数链接：https://blog.csdn.net/weixin_56658592/article/details/121598876
+    // 遍历AST，需要传递两个参数给walk函数：AST根节点和访问器对象。访问器对象是一个包含处理各种不同类型节点的方法的对象。
+    // 例如，如果要处理VariableDeclaration节点，则需要在访问器对象中定义一个名为VariableDeclaration的方法。
     walk(node, {
       enter(node) {
         code.addSourcemapLocation(node.start)
@@ -183,6 +185,8 @@ export default function generate(parsed, template) {
   // helpers文件中的parsed.html.children为以上所示
   parsed.html.children.forEach((child) => {
     walkHtml(child, {
+      //想要处理某种类型的节点，就定义一个该类型名字的方法，其中可以包含钩子函数，enter（）和leave（）
+      // 以下几种类型是解析tag时定义的
       Comment: {
         // do nothing
       },
@@ -343,7 +347,6 @@ export default function generate(parsed, template) {
 								`)
               }
             } else if (attribute.type === 'Binding') {
-          
               createBinding(node, name, attribute, current, initStatements, updateStatements, teardownStatements, allUsedContexts)
             } else if (attribute.type === 'Ref') {
               usesRefs = true
@@ -362,29 +365,74 @@ export default function generate(parsed, template) {
               throw new Error(`Not implemented: ${attribute.type}`)
             }
           })
-
+          // binding-input-text-deep-contextual文件为例
+          // all: Set(1) { 'item' }
           if (allUsedContexts.size) {
             initStatements.push(deindent`
 							${name}.__svelte = {};
 						`)
-
+            // [
+            //   "var input = document.createElement( 'input' );",
+            //   'var input_updating = false;\n' +
+            //     '\n' +
+            //     'function inputChangeHandler () {\n' +
+            //     '\tinput_updating = true;\n' +
+            //     '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+            //     '\tvar index = this.__svelte.item__index;\n' +
+            //     '\tlist[index].description = this.value;\n' +
+            //     '\t\n' +
+            //     "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+            //     '\tinput_updating = false;\n' +
+            //     '}\n' +
+            //     '\n' +
+            //     "input.addEventListener( 'input', inputChangeHandler, false );",
+            //   'input.__svelte = {};'
+            // ]
+            // 上面数组中，第一项是enter函数初始化push的，第二项是createBinding时候push的
+            // [...allUsedContexts]=[ 'item' ]
             const declarations = [...allUsedContexts]
               .map((contextName) => {
                 if (contextName === 'root') return `${name}.__svelte.root = root;`
 
                 const listName = current.listNames[contextName]
+                //listName: eachBlock_0_value
                 const indexName = current.indexNames[contextName]
-
+                // indexName:item__index
                 return `${name}.__svelte.${listName} = ${listName};\n${name}.__svelte.${indexName} = ${indexName};`
+                // input.__svelte.eachBlock_0_value = eachBlock_0_value;\ninput.__svelte.item__index = item__index;
               })
               .join('\n')
-
+            // declarations:input.__svelte.eachBlock_0_value = eachBlock_0_value;input.__svelte.item__index = item__index;
             updateStatements.push(declarations)
           }
-
+          //updateStatements: [
+          //   'if ( !input_updating ) input.value = item.description',
+          //   'input.__svelte.eachBlock_0_value = eachBlock_0_value;\n' +
+          //     'input.__svelte.item__index = item__index;'
+          // ]
           teardownStatements.push(`${name}.parentNode.removeChild( ${name} );`)
-
+          // teardownStatements: [ 'p.parentNode.removeChild( p );' ]
           current.initStatements.push(initStatements.join('\n'))
+          // [
+          //   "var div = document.createElement( 'div' );",
+          //   "var input = document.createElement( 'input' );\n" +
+          //     'var input_updating = false;\n' +
+          //     '\n' +
+          //     'function inputChangeHandler () {\n' +
+          //     '\tinput_updating = true;\n' +
+          //     '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+          //     '\tvar index = this.__svelte.item__index;\n' +
+          //     '\tlist[index].description = this.value;\n' +
+          //     '\t\n' +
+          //     "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+          //     '\tinput_updating = false;\n' +
+          //     '}\n' +
+          //     '\n' +
+          //     "input.addEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.__svelte = {};',
+          //   'div.appendChild( input );',
+          //   "var p = document.createElement( 'p' );"
+          // ]
           if (updateStatements.length) current.updateStatements.push(updateStatements.join('\n'))
           current.teardownStatements.push(teardownStatements.join('\n'))
 
@@ -392,13 +440,212 @@ export default function generate(parsed, template) {
             target: name,
             parent: current,
           })
+          // current:{
+          //   useAnchor: false,
+          //   name: 'renderEachBlock_0',
+          //   target: 'input',
+          //   expression: Node { type: 'Identifier', start: 8, end: 13, name: 'items' },
+          //   context: 'item',
+          //   contexts: { item: true },
+          //   indexes: {},
+          //   indexNames: { item: 'item__index' },
+          //   listNames: { item: 'eachBlock_0_value' },
+          //   contextChain: [ 'root', 'eachBlock_0_value', 'item', 'item__index' ],
+          //   initStatements: [
+          //     "var div = document.createElement( 'div' );",
+          //     "var input = document.createElement( 'input' );\n" +
+          //       'var input_updating = false;\n' +
+          //     '\n' +
+          //     'function inputChangeHandler () {\n' +
+          //     '\tinput_updating = true;\n' +
+          //     '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+          //     '\tvar index = this.__svelte.item__index;\n' +
+          //     '\tlist[index].description = this.value;\n' +
+          //     '\t\n' +
+          //     "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+          //     '\tinput_updating = false;\n' +
+          //     '}\n' +
+          //     '\n' +
+          //     "input.addEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.__svelte = {};'
+          // ],
+          // updateStatements: [
+          //   'var item = eachBlock_0_value[item__index];',
+          //   'if ( !input_updating ) input.value = item.description\n' +
+          //     'input.__svelte.eachBlock_0_value = eachBlock_0_value;\n' +
+          //     'input.__svelte.item__index = item__index;'
+          // ],
+          // teardownStatements: [
+          //   'div.parentNode.removeChild( div );',
+          //   "input.removeEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.parentNode.removeChild( input );'
+          // ],
+          // counter: [Function (anonymous)],
+          // parent: {
+          //   useAnchor: false,
+          //   name: 'renderEachBlock_0',
+          //   target: 'div',
+          //   expression: Node { type: 'Identifier', start: 8, end: 13, name: 'items' },
+          //   context: 'item',
+          //   contexts: { item: true },
+          //   indexes: {},
+          //   indexNames: { item: 'item__index' },
+          //   listNames: { item: 'eachBlock_0_value' },
+          //   contextChain: [ 'root', 'eachBlock_0_value', 'item', 'item__index' ],
+          // initStatements: [
+          //   "var div = document.createElement( 'div' );",
+          //   "var input = document.createElement( 'input' );\n" +
+          //     'var input_updating = false;\n' +
+          //     '\n' +
+          //     'function inputChangeHandler () {\n' +
+          //     '\tinput_updating = true;\n' +
+          //     '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+          //     '\tvar index = this.__svelte.item__index;\n' +
+          //     '\tlist[index].description = this.value;\n' +
+          //     '\t\n' +
+          //     "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+          //     '\tinput_updating = false;\n' +
+          //     '}\n' +
+          //     '\n' +
+          //     "input.addEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.__svelte = {};'
+          // ],
+          // updateStatements: [
+          //   'var item = eachBlock_0_value[item__index];',
+          //   'if ( !input_updating ) input.value = item.description\n' +
+          //     'input.__svelte.eachBlock_0_value = eachBlock_0_value;\n' +
+          //     'input.__svelte.item__index = item__index;'
+          // ],
+          // teardownStatements: [
+          //   'div.parentNode.removeChild( div );',
+          //   "input.removeEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.parentNode.removeChild( input );'
+          // ],
+          // counter: [Function (anonymous)],
+          // parent: {
+          //   useAnchor: false,
+          //   name: 'renderEachBlock_0',
+          //   target: 'target',
+          //   expression: [Node],
+          //   context: 'item',
+          //       contexts: [Object],
+          //       indexes: {},
+          //       indexNames: [Object],
+          //       listNames: [Object],
+          //       contextChain: [Array],
+          //       initStatements: [Array],
+          //       updateStatements: [Array],
+          //       teardownStatements: [Array],
+          //       counter: [Function (anonymous)],
+          //       parent: [Object]
+          //     }
+          //   }
+          // }
         },
-
+        // enter函数结束
         leave() {
           const name = current.target
-
           current = current.parent
-
+          // name: input
+          // current: {
+          //   useAnchor: false,
+          // name: 'renderEachBlock_0',
+          // target: 'div',
+          // expression: Node { type: 'Identifier', start: 8, end: 13, name: 'items' },
+          // context: 'item',
+          // contexts: { item: true },
+          // indexes: {},
+          // indexNames: { item: 'item__index' },
+          // listNames: { item: 'eachBlock_0_value' },
+          // contextChain: [ 'root', 'eachBlock_0_value', 'item', 'item__index' ],
+          // initStatements: [
+          //   "var div = document.createElement( 'div' );",
+          //   "var input = document.createElement( 'input' );\n" +
+          //     'var input_updating = false;\n' +
+          //     '\n' +
+          //     'function inputChangeHandler () {\n' +
+          //     '\tinput_updating = true;\n' +
+          //     '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+          //     '\tvar index = this.__svelte.item__index;\n' +
+          //     '\tlist[index].description = this.value;\n' +
+          //     '\t\n' +
+          //     "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+          //     '\tinput_updating = false;\n' +
+          //     '}\n' +
+          //     '\n' +
+          //     "input.addEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.__svelte = {};'
+          // ],
+          // updateStatements: [
+          //   'var item = eachBlock_0_value[item__index];',
+          //   'if ( !input_updating ) input.value = item.description\n' +
+          //     'input.__svelte.eachBlock_0_value = eachBlock_0_value;\n' +
+          //     'input.__svelte.item__index = item__index;'
+          // ],
+          // teardownStatements: [
+          //   'div.parentNode.removeChild( div );',
+          //   "input.removeEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.parentNode.removeChild( input );'
+          // ],
+          // counter: [Function (anonymous)],
+          // parent: {
+          //   useAnchor: false,
+          //   name: 'renderEachBlock_0',
+          //   target: 'target',
+          //   expression: Node { type: 'Identifier', start: 8, end: 13, name: 'items' },
+          //   context: 'item',
+          //   contexts: { item: true },
+          //   indexes: {},
+          //   indexNames: { item: 'item__index' },
+          //   listNames: { item: 'eachBlock_0_value' },
+          //   contextChain: [ 'root', 'eachBlock_0_value', 'item', 'item__index' ],
+          //   initStatements: [
+          //     "var div = document.createElement( 'div' );",
+          //     "var input = document.createElement( 'input' );\n" +
+          //       'var input_updating = false;\n' +
+          //       '\n' +
+          //       'function inputChangeHandler () {\n' +
+          //       '\tinput_updating = true;\n' +
+          //       '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+          //       '\tvar index = this.__svelte.item__index;\n' +
+          //       '\tlist[index].description = this.value;\n' +
+          //       '\t\n' +
+          //       "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+          //       '\tinput_updating = false;\n' +
+          //       '}\n' +
+          //     '\n' +
+          //     "input.addEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.__svelte = {};'
+          // ],
+          // updateStatements: [
+          //   'var item = eachBlock_0_value[item__index];',
+          //   'if ( !input_updating ) input.value = item.description\n' +
+          //     'input.__svelte.eachBlock_0_value = eachBlock_0_value;\n' +
+          //     'input.__svelte.item__index = item__index;'
+          // ],
+          // teardownStatements: [
+          //   'div.parentNode.removeChild( div );',
+          //   "input.removeEventListener( 'input', inputChangeHandler, false );\n" +
+          //     'input.parentNode.removeChild( input );'
+          // ],
+          //     counter: [Function (anonymous)],
+          //     parent: {
+          //       useAnchor: false,
+          //       name: 'renderMainFragment',
+          //       target: 'target',
+          //       initStatements: [Array],
+          //       updateStatements: [Array],
+          //       teardownStatements: [Array],
+          //       contexts: {},
+          //       indexes: {},
+          //       contextChain: [Array],
+          //       indexNames: {},
+          //       listNames: {},
+          //       counter: [Function (anonymous)],
+          //       parent: null
+          //     }
+          //   }
+          // }
           if (current.useAnchor && current.target === 'target') {
             current.initStatements.push(deindent`
 							anchor.parentNode.insertBefore( ${name}, anchor );
@@ -407,9 +654,34 @@ export default function generate(parsed, template) {
             current.initStatements.push(deindent`
 							${current.target}.appendChild( ${name} );
 						`)
+
+            // current.initStatements: [
+            //   "var div = document.createElement( 'div' );",
+            //   "var input = document.createElement( 'input' );\n" +
+            //     'var input_updating = false;\n' +
+            //     '\n' +
+            //     'function inputChangeHandler () {\n' +
+            //     '\tinput_updating = true;\n' +
+            //     '\tvar list = this.__svelte.eachBlock_0_value;\n' +
+            //     '\tvar index = this.__svelte.item__index;\n' +
+            //     '\tlist[index].description = this.value;\n' +
+            //     '\t\n' +
+            //     "\tcomponent.set({ items: component.get( 'items' ) });\n" +
+            //     '\tinput_updating = false;\n' +
+            //     '}\n' +
+            //     '\n' +
+            //     "input.addEventListener( 'input', inputChangeHandler, false );\n" +
+            //     'input.__svelte = {};',
+            //   'div.appendChild( input );',
+            //   "var p = document.createElement( 'p' );",
+            //   "var text = document.createTextNode( '' );\n" +
+            //     "var text_value = '';\n" +
+            //     'p.appendChild( text );',
+            //   'div.appendChild( p );'
+            // ]
           }
-        },
-      }, //Element结束
+        }, //leave函数结束
+      }, //Element类型结束
 
       Text: {
         enter(node) {
@@ -647,16 +919,69 @@ export default function generate(parsed, template) {
 		state = Object.assign( {}, oldState, newState );
 	`,
   ]
+  // computed-values文件
+  //templateProperties.computed: Node {
+  //   type: 'ObjectExpression',
+  //   start: 146,
+  //   end: 200,
+  //   properties: [
+  //     Node {
+  //       type: 'Property',
+  //       start: 151,
+  //       end: 171,
+  //       method: false,
+  //       shorthand: false,
+  //       computed: false,
+  //       key: [Node],
+  //       value: [Node],
+  //       kind: 'init'
+  //     },
+  //     Node {
+  //       type: 'Property',
+  //       start: 176,
+  //       end: 196,
+  //       method: false,
+  //       shorthand: false,
+  //       computed: false,
+  //       key: [Node],
+  //       value: [Node],
+  //       kind: 'init'
+  //     }
+  //   ]
+  // }
 
   if (templateProperties.computed) {
     const dependencies = new Map()
 
     templateProperties.computed.properties.forEach((prop) => {
+      //第一个对象中的key: { type: 'Identifier', start: 151, end: 152, name: 'c' }
       const key = prop.key.name
+      // 第一个对象中的value:{
+      //   type: 'ArrowFunctionExpression',
+      //   start: 154,
+      //   end: 171,
+      //   id: null,
+      //   generator: false,
+      //   expression: true,
+      //   async: false,
+      //   params: [
+      //     Node { type: 'Identifier', start: 156, end: 157, name: 'a' },
+      //     Node { type: 'Identifier', start: 159, end: 160, name: 'b' }
+      //   ],
+      //   body: Node {
+      //     type: 'BinaryExpression',
+      //     start: 166,
+      //     end: 171,
+      //     left: Node { type: 'Identifier', start: 166, end: 167, name: 'a' },
+      //     operator: '+',
+      //     right: Node { type: 'Identifier', start: 170, end: 171, name: 'b' }
+      //   }
+      // }
       const value = prop.value
-
+      // [a,b]
       const deps = value.params.map((param) => param.name)
       dependencies.set(key, deps)
+      // 文件中的所有依赖关系：Set类型  { 'c' => [ 'a', 'b' ], 'cSquared' => [ 'c' ] }
     })
 
     const visited = new Set()
@@ -665,8 +990,9 @@ export default function generate(parsed, template) {
       if (!dependencies.has(key)) return // not a computation
 
       if (visited.has(key)) return
+      // 将‘c'添加进去
       visited.add(key)
-
+      // 获取依赖数组
       const deps = dependencies.get(key)
       deps.forEach(visit)
 
@@ -676,7 +1002,20 @@ export default function generate(parsed, template) {
 				}
 			`)
     }
+    // 对于第一个property，后面两个是setStatements.push进去的
+    // setStatements: [
+    // 'const oldState = state;\nstate = Object.assign( {}, oldState, newState );',
+    // 第一个c依赖更新
+    //   "if ( ( 'a' in newState && typeof state.a === 'object' || state.a !== oldState.a ) || ( 'b' in newState && typeof state.b === 'object' || state.b !== oldState.b ) ) {\n" +
+    //     '\tstate.c = newState.c = template.computed.c( state.a, state.b );\n' +
+    //     '}',
+    // 第二个cSquared依赖更新
+    //   "if ( ( 'c' in newState && typeof state.c === 'object' || state.c !== oldState.c ) ) {\n" +
+    //     '\tstate.cSquared = newState.cSquared = template.computed.cSquared( state.c );\n' +
+    //     '}'
+    // ]
 
+    //第一个对象中的key: { type: 'Identifier', start: 151, end: 152, name: 'c' }
     templateProperties.computed.properties.forEach((prop) => visit(prop.key.name))
   }
 
@@ -757,7 +1096,6 @@ export default function generate(parsed, template) {
 			return component;
 		}
 	`
-
   const pattern = /\[✂(\d+)-(\d+)$/
 
   const parts = result.split('✂]')
@@ -795,4 +1133,4 @@ export default function generate(parsed, template) {
     code: code.toString(),
     map: code.generateMap(),
   }
-}
+} 
