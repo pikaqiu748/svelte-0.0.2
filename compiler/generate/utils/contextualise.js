@@ -22,6 +22,9 @@ export default function contextualise(code, expression, contexts, indexes, helpe
         }
 
         if (contexts[name]) {
+			// ~x=-(x+1)
+			// ~['x'].indexOf('x') 永远返回<0的数字，等于0说明不存在。
+			// !0又会转为false，所以!~['x'].indexOf('x')可以判断是否存在于数组。
           if (!~usedContexts.indexOf(name)) usedContexts.push(name)
         } else if (indexes[name]) {
           const context = indexes[name]
