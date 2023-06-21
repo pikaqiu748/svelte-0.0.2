@@ -14,6 +14,11 @@
 //   }
 // }
 
+// 判断变量是否是一个引用。 如下代码，add函数中count是一个对外部定义的变量的引用，如果引用值是一个writable或mutated的变量，则会将count作为依赖进行收集
+
+// function add () {
+//     count += 1
+// }
 export default function isReference(node, parent) {
   if (node.type === 'MemberExpression') {
     // MemberExpression 表示 a.b或者a[b]这样的语句，第一种方式computed为false,第二种computed为true

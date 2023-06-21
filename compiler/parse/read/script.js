@@ -1,3 +1,4 @@
+// 词法分析器（Tokenizer）,接收代码组成的字符串，然后把它们分割成 token 组成的数组
 import { parse, tokenizer } from 'acorn'
 import spaces from '../utils/spaces.js'
 
@@ -26,7 +27,7 @@ export default function readScript(parser, start, attributes) {
   let ast
 
   try {
-	// 返回抽象语法树
+	// 返回抽象语法树,
     ast = parse(source, {
       // 设置你要解析的 JavaScript 的 ECMA 版本。默认是 ES7。
       ecmaVersion: 8,

@@ -12,5 +12,5 @@ export default function flatten(node) {
 
   const name = node.name
   parts.unshift(name)
-  return { name, keypath: parts.join('.') }
+  return { name, keypath: parts.join('.') } 
 }

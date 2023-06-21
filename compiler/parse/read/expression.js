@@ -1,5 +1,8 @@
 import { parseExpressionAt } from 'acorn'
 
+// Acorn.parseExpressionAt
+// 可以从任意字符串中提取表达式，比如在解析下面的HTML时，可以通过 parseExpressionAt('test}</h2>') 方法, 将test变量提取成AST表达式
+// <h1>{test}</h2>
 export default function readExpression(parser) {
   try {
     // parse a single
