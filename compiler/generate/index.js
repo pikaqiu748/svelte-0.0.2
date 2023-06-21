@@ -10,6 +10,7 @@ import createBinding from './binding/index.js'
 
 function createRenderer(fragment) {
   if (fragment.autofocus) {
+    // fragment.autofocus:'input'
     fragment.initStatements.push(`${fragment.autofocus}.focus();`)
   }
 
@@ -56,8 +57,10 @@ export default function generate(parsed, template) {
     // 函数链接：https://blog.csdn.net/weixin_56658592/article/details/121598876
     // 遍历AST，需要传递两个参数给walk函数：AST根节点和访问器对象。访问器对象是一个包含处理各种不同类型节点的方法的对象。
     // 例如，如果要处理VariableDeclaration节点，则需要在访问器对象中定义一个名为VariableDeclaration的方法。
+    // walk遍历遍历语句/词法是从后往前递归遍历，也就是会先遍历后面的语句和词法.https://juejin.cn/post/7091196776891777061#heading-2
     walk(node, {
       enter(node) {
+        // // 給开始和结束的地方打上标记,相当于做sourcemap映射
         code.addSourcemapLocation(node.start)
         code.addSourcemapLocation(node.end)
       },
@@ -547,7 +550,7 @@ export default function generate(parsed, template) {
           const name = current.target
           current = current.parent
           // name: input
-          // current: {
+          // current.parent: {
           //   useAnchor: false,
           // name: 'renderEachBlock_0',
           // target: 'div',
@@ -1133,4 +1136,4 @@ export default function generate(parsed, template) {
     code: code.toString(),
     map: code.generateMap(),
   }
-} 
+}

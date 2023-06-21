@@ -15,3 +15,6 @@ walk(ast, {
         console.log(node);
     }
 });
+
+
+console.log(['1','dsd'].join(','));
