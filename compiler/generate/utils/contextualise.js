@@ -11,7 +11,8 @@ export default function contextualise(code, expression, contexts, indexes, helpe
     enter(node, parent) {
       if (isReference(node, parent)) {
         const { name } = flattenReference(node)
-
+        // func() is a CallExpression
+        // thing.func is a MemberExpression
         if (parent && parent.type === 'CallExpression' && node === parent.callee) {
           if (helpers[name]) code.insertRight(node.start, `template.helpers.`)
           return

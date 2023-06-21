@@ -40,6 +40,13 @@ function ParseError(message, template, index) {
 }
 
 // 解析器
+// 解析一般来说会分成两个阶段：词法分析（Lexical Analysis）和语法分析（Syntactic Analysis）。
+// 1. 词法分析:接收原始代码，然后把它分割成一些被称为 Token 的东西，这个过程是在词法分析器（Tokenizer或者Lexer）中完成的。
+// Token 是一个数组，由一些代码语句的碎片组成。它们可以是数字、标签、标点符号、运算符，
+// 2.语法分析:接收之前生成的 Token，把它们转换成一种抽象的表示，这种抽象的表示描述了代
+//  码语句中的每一个片段以及它们之间的关系。这被称为中间表示（intermediate representation）
+//  或抽象语法树（Abstract Syntax Tree， 缩写为AST）
+
 export default function parse(template) {
   const parser = {
     index: 0,

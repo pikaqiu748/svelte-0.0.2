@@ -912,7 +912,7 @@ export default function generate(parsed, template) {
         },
       },
     })
-  })
+  })//forEach结束
 
   renderers.push(createRenderer(current))
 
