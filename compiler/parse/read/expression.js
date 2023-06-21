@@ -1,3 +1,4 @@
+// acorn可以完成javascript代码解析工作，这个代码解析工作的产出即ast（抽象语法树）
 import { parseExpressionAt } from 'acorn'
 
 // Acorn.parseExpressionAt
@@ -9,7 +10,6 @@ export default function readExpression(parser) {
     // expression in a string, and return its AST. It will not complain if
     // there is more of the string left after the expression.
     const node = parseExpressionAt(parser.template, parser.index)
-    // console.log(parser.template,parser.index);
     parser.index = node.end
 
     // TODO check it's a valid expression. probably shouldn't have
